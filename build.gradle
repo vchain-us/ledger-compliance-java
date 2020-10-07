@@ -1,0 +1,189 @@
+/*
+Copyright 2019-2020 vChain, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.12'
+    }
+}
+
+plugins {
+    id 'java-library'
+    id 'jacoco'
+    id 'com.github.kt3k.coveralls' version '2.8.4'
+    id 'maven'
+}
+
+apply plugin: 'java'
+apply plugin: 'com.google.protobuf'
+apply plugin: 'idea'
+apply plugin: 'maven-publish'
+
+
+group = 'io.codenotary'
+archivesBaseName = 'ledger-compliance-java'
+version = '0.0.1'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+def grpcVersion = '1.26.0'
+
+protobuf {
+    protoc {
+        // The version of protoc must match protobuf-java. If you don't depend on
+        // protobuf-java directly, you will be transitively depending on the
+        // protobuf-java version that grpc depends on.
+        artifact = "com.google.protobuf:protoc:3.2.0"
+    }
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}"
+        }
+    }
+
+    generateProtoTasks {
+        all().each { task ->
+            task.builtins {
+                java {
+                    option 'annotate_code'
+                }
+            }
+        }
+        all()*.plugins {
+            grpc {}
+        }
+    }
+    generatedFilesBaseDir = "$projectDir/src/generated"
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = "GitHubPackagesDownload"
+        url = uri("https://maven.pkg.github.com/codenotary/immudb4j")
+        credentials {
+            username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+            password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
+        }
+    }
+
+}
+
+// configurations for the integration test
+sourceSets {
+    integrationTest {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+}
+
+configurations {
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+dependencies {
+    compile "io.grpc:grpc-protobuf:${grpcVersion}"
+    compile "io.grpc:grpc-netty:${grpcVersion}"
+    compile "io.grpc:grpc-stub:${grpcVersion}"
+    compile group: 'com.google.code.gson', name: 'gson', version: '2.8.6'
+
+    testCompile 'org.testng:testng:6.8.8'
+
+    compile 'javax.annotation:javax.annotation-api:1.2-b01'
+    implementation 'io.codenotary:immudb4j:0.1.8'
+}
+
+/* TODO add script here to initialize a local CNLC instance with an already configured ledger + API key
+task lcStart {
+    ProcessBuilder pb = new ProcessBuilder("./start.sh")
+    pb.directory(new File("immudb"))
+    Process proc = pb.start();
+    proc.waitFor();
+    println "immudb is running... " + proc.exitValue()
+}
+
+task lcStop(type: Exec) {
+    workingDir 'immudb'
+    commandLine './stop.sh'
+}
+ */
+
+
+idea {
+    module {
+        sourceDirs += file("${projectDir}/src/generated/main/java")
+        sourceDirs += file("${projectDir}/src/generated/main/grpc")
+    }
+}
+
+test {
+    useTestNG()
+}
+
+//test.dependsOn immudbStart
+
+//test.finalizedBy([jacocoTestReport, immudbStop])
+test.finalizedBy([jacocoTestReport])
+
+task integrationTest(type: Test) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+        html.enabled true
+    }
+
+    afterEvaluate {
+        getClassDirectories().setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: 'io/codenotary/immudb/**')
+        }))
+    }
+}
+
+coveralls {
+    jacocoReportPath 'build/reports/jacoco/test/jacocoTestReport.xml'
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/codenotary/ledger-compliance-java")
+            credentials {
+                username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+                password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
+            }
+        }
+    }
+    publications {
+        gpr(MavenPublication) {
+            from(components.java)
+        }
+    }
+}

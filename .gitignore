@@ -21,3 +21,16 @@
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+
+.idea/
+.gradle/
+.settings/
+.classpath
+.project
+build/
+bin/
+src/generated/**
+/immudb/**
+!immudb/start.sh
+!immudb/stop.sh
+**/.DS_Store
