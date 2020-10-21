@@ -76,15 +76,6 @@ protobuf {
 
 repositories {
     mavenCentral()
-    maven {
-        name = "GitHubPackagesDownload"
-        url = uri("https://maven.pkg.github.com/codenotary/immudb4j")
-        credentials {
-            username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
-            password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
-        }
-    }
-
 }
 
 // configurations for the integration test
