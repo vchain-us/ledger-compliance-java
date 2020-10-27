@@ -19,8 +19,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.Empty;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.codenotary.immudb.ImmudbProto;
-import io.codenotary.immudb4j.RootHolder;
-import io.codenotary.immudb4j.SerializableRootHolder;
+import io.codenotary.immudb4j.*;
 import io.codenotary.immudb4j.crypto.CryptoUtils;
 import io.codenotary.immudb4j.crypto.Root;
 import io.codenotary.immudb4j.crypto.VerificationException;
@@ -30,6 +29,8 @@ import io.grpc.ManagedChannelBuilder;
 import lc.schema.LcServiceGrpc;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * CodeNotary Ledger Compliance client using grpc.
@@ -274,6 +275,98 @@ public class LedgerComplianceClient {
         CryptoUtils.verify(proof, item, root);
 
         rootHolder.setRoot(new Root(apiKey, proof.getAt(), proof.getRoot().toByteArray()));
+    }
+    public void setAll(KVList kvList) {
+        KVList.KVListBuilder svListBuilder = KVList.newBuilder();
+
+        for (KV kv : kvList.entries()) {
+            ImmudbProto.Content content = ImmudbProto.Content.newBuilder()
+                    .setTimestamp(System.currentTimeMillis() / 1000L)
+                    .setPayload(ByteString.copyFrom(kv.getValue()))
+                    .build();
+            svListBuilder.add(kv.getKey(), content.toByteArray());
+        }
+
+        rawSetAll(svListBuilder.build());
+    }
+
+    public void rawSetAll(KVList kvList) {
+        ImmudbProto.KVList.Builder builder = ImmudbProto.KVList.newBuilder();
+
+        for (KV kv : kvList.entries()) {
+            ImmudbProto.KeyValue skv =
+                    ImmudbProto.KeyValue.newBuilder()
+                            .setKey(ByteString.copyFrom(kv.getKey()))
+                            .setValue(ByteString.copyFrom(kv.getValue()))
+                            .build();
+
+            builder.addKVs(skv);
+        }
+
+        stub.setBatch(builder.build());
+    }
+
+    public List<KV> getAll(List<?> keyList) {
+        List<KV> rawKVs = rawGetAll(keyList);
+        List<KV>  kvs = new ArrayList<>(rawKVs.size());
+
+        for (KV rawKV : rawKVs) {
+            try {
+                ImmudbProto.Content content = ImmudbProto.Content.parseFrom(rawKV.getValue());
+                kvs.add(new KVPair(rawKV.getKey(), content.getPayload().toByteArray()));
+            } catch (InvalidProtocolBufferException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        return kvs;
+    }
+
+    public List<KV> rawGetAll(List<?> keyList) {
+        if (keyList == null) {
+            throw new RuntimeException("Illegal argument");
+        }
+
+        if (keyList.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        if (keyList.get(0) instanceof String) {
+            List<byte[]> kList = new ArrayList<>(keyList.size());
+
+            for (Object key : keyList) {
+                kList.add(((String)key).getBytes(StandardCharsets.UTF_8));
+            }
+
+            return rawGetAllFrom(kList);
+        }
+
+        if (keyList.get(0) instanceof byte[]) {
+            return rawGetAllFrom((List<byte[]>)keyList);
+        }
+
+        throw new RuntimeException("Illegal argument");
+    }
+
+    private List<KV> rawGetAllFrom(List<byte[]> keyList) {
+
+        ImmudbProto.KeyList.Builder builder = ImmudbProto.KeyList.newBuilder();
+
+        for (byte[] key : keyList) {
+            ImmudbProto.Key k = ImmudbProto.Key.newBuilder().setKey(ByteString.copyFrom(key)).build();
+            builder.addKeys(k);
+        }
+
+        ImmudbProto.ItemList res = stub.getBatch(builder.build());
+
+        List<KV> result = new ArrayList<>(res.getItemsCount());
+
+        for (ImmudbProto.Item item : res.getItemsList()) {
+            KV kv = new KVPair(item.getKey().toByteArray(), item.getValue().toByteArray());
+            result.add(kv);
+        }
+
+        return result;
     }
 
 }

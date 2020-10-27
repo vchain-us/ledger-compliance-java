@@ -83,7 +83,6 @@ public class BasicLcClientTest extends LcClientIntegrationTest {
 
   }
 
-  /*
   @Test
   public void testGetAllAndSetAll() {
 
@@ -108,7 +107,7 @@ public class BasicLcClientTest extends LcClientIntegrationTest {
     List<KV> getAllResult = lcClient.getAll(keys);
 
     Assert.assertNotNull(getAllResult);
-    Assert.assertTrue(getAllResult.size() == keys.size());
+    Assert.assertEquals(keys.size(), getAllResult.size());
 
     for (int i = 0; i < getAllResult.size(); i++) {
       KV kv = getAllResult.get(i);
@@ -123,5 +122,4 @@ public class BasicLcClientTest extends LcClientIntegrationTest {
 
   }
 
-   */
 }

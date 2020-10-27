@@ -34,6 +34,7 @@ src/generated/**
 !immudb/start.sh
 !immudb/stop.sh
 **/.DS_Store
+roots/
 
 *.iml
 *.ipr

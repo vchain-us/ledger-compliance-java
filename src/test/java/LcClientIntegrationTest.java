@@ -31,9 +31,9 @@ public abstract class LcClientIntegrationTest {
 
     lcClient = LedgerComplianceClient.newBuilder()
             .setRootHolder(rootHolder)
-            .setServerUrl("ppp.immudb.io")
+            .setServerUrl("localhost")
             .setServerPort(3324)
-            .setApiKey("oyshkxyipyvprtqgrwyczlhdnvyrwbchhxxj")
+            .setApiKey("APIKEYHERE")
             .build();
   }
 }
