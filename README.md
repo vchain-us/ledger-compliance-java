@@ -40,7 +40,8 @@ by versions 8 or higher.
 
 ## Installation
 
-Just include ledger-compliance-java as a dependency in your project:
+Just include ledger-compliance-java as a dependency in your project and immudb4j for native Java access to immudb
+objects:
 
 if using `Maven`:
 ```xml
@@ -49,11 +50,17 @@ if using `Maven`:
         <artifactId>ledger-compliance-java</artifactId>
         <version>0.1.0</version>
     </dependency> 
+    <dependency>
+        <groupId>io.codenotary</groupId>
+        <artifactId>immudb4j</artifactId>
+        <version>0.1.8</version>
+    </dependency> 
 ```
 
 if using `Gradle`:
 ```groovy
     compile 'io.codenotary:ledger-compliance-java:0.1.0'
+    compile 'io.codenotary:immudb4j:0.1.0'
 ```
 
 ledger-compliance-java is currently hosted on both [Maven Central] and [Github Packages].
