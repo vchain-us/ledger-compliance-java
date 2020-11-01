@@ -29,18 +29,18 @@ plugins {
     id 'java-library'
     id 'jacoco'
     id 'com.github.kt3k.coveralls' version '2.8.4'
-    id 'maven'
 }
 
 apply plugin: 'java'
 apply plugin: 'com.google.protobuf'
 apply plugin: 'idea'
 apply plugin: 'maven-publish'
-
+apply plugin: 'maven'
+apply plugin: 'signing'
 
 group = 'io.codenotary'
 archivesBaseName = 'ledger-compliance-java'
-version = '0.0.1'
+version = '0.1.0'
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
@@ -72,6 +72,11 @@ protobuf {
         }
     }
     generatedFilesBaseDir = "$projectDir/src/generated"
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
 }
 
 repositories {
@@ -107,22 +112,6 @@ dependencies {
     implementation 'io.codenotary:immudb4j:0.1.8'
 }
 
-/* TODO add script here to initialize a local CNLC instance with an already configured ledger + API key
-task lcStart {
-    ProcessBuilder pb = new ProcessBuilder("./start.sh")
-    pb.directory(new File("immudb"))
-    Process proc = pb.start();
-    proc.waitFor();
-    println "immudb is running... " + proc.exitValue()
-}
-
-task lcStop(type: Exec) {
-    workingDir 'immudb'
-    commandLine './stop.sh'
-}
- */
-
-
 idea {
     module {
         sourceDirs += file("${projectDir}/src/generated/main/java")
@@ -134,9 +123,6 @@ test {
     useTestNG()
 }
 
-//test.dependsOn immudbStart
-
-//test.finalizedBy([jacocoTestReport, immudbStop])
 test.finalizedBy([jacocoTestReport])
 
 task integrationTest(type: Test) {
@@ -152,7 +138,7 @@ jacocoTestReport {
 
     afterEvaluate {
         getClassDirectories().setFrom(files(classDirectories.files.collect {
-            fileTree(dir: it, exclude: 'io/codenotary/immudb/**')
+            fileTree(dir: it, exclude: ['io/codenotary/immudb/**', 'lc/schema/**'])
         }))
     }
 }
@@ -164,8 +150,17 @@ coveralls {
 publishing {
     repositories {
         maven {
+            name = "OSSRH"
+            url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
+            credentials {
+                username = project.findProperty("ossrhUsername") ?: System.getenv("MAVEN_USERNAME")
+                password = project.findProperty("ossrhPassword") ?: System.getenv("MAVEN_PASSWORD")
+            }
+        }
+
+        maven {
             name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/codenotary/ledger-compliance-java")
+            url = uri("https://maven.pkg.github.com/vchain-us/ledger-compliance-java")
             credentials {
                 username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
                 password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
@@ -175,6 +170,35 @@ publishing {
     publications {
         gpr(MavenPublication) {
             from(components.java)
+
+            pom {
+                name = 'ledger-compliance-java'
+                description = 'Java SDK for CodeNotary Ledger Compliance'
+                url = 'https://github.com/vchain-us/ledger-compliance-java'
+
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'giako'
+                        name = 'Giacomo Russo'
+                        email = 'giacomo@vchain.us'
+                    }
+                }
+                scm {
+                    url = 'https://github.com/vchain-us/ledger-compliance-java'
+                    connection = 'scm:https://github.com/vchain-us/ledger-compliance-java.git'
+                    developerConnection = 'scm:https://github.com/vchain-us/ledger-compliance-java.git'
+                }
+            }
         }
+    }
+
+    signing {
+        sign publishing.publications.gpr
     }
 }

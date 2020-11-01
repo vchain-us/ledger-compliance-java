@@ -32,7 +32,7 @@ public abstract class LcClientIntegrationTest {
     lcClient = LedgerComplianceClient.newBuilder()
             .setRootHolder(rootHolder)
             .setServerUrl("localhost")
-            .setServerPort(3324)
+            .setServerPort(33080)
             .setApiKey("APIKEYHERE")
             .build();
   }
