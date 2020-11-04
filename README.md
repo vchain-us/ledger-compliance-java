@@ -1,5 +1,7 @@
 # ledger-compliance-java [![License](https://img.shields.io/github/license/vchain-us/ledger-compliance-java)](LICENSE)
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.codenotary/ledger-compliance-java.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22io.codenotary%22%20AND%20a:%22ledger-compliance-java%22)
+
 ## Official CodeNotary Ledger Compliance client for Java 1.8 and above
 
 ## Contents
