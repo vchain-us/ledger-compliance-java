@@ -26,6 +26,7 @@ import io.codenotary.immudb4j.crypto.VerificationException;
 import io.codenotary.ledgercompliance.client.interceptor.ApiKeyInterceptor;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import lc.schema.Lc;
 import lc.schema.LcServiceGrpc;
 
 import java.nio.charset.StandardCharsets;
@@ -200,6 +201,7 @@ public class LedgerComplianceClient {
                         .setValue(ByteString.copyFrom(value))
                         .build();
 
+        //noinspection ResultOfMethodCallIgnored
         stub.set(kv);
     }
 
@@ -303,23 +305,13 @@ public class LedgerComplianceClient {
             builder.addKVs(skv);
         }
 
+        //noinspection ResultOfMethodCallIgnored
         stub.setBatch(builder.build());
     }
 
     public List<KV> getAll(List<?> keyList) {
         List<KV> rawKVs = rawGetAll(keyList);
-        List<KV>  kvs = new ArrayList<>(rawKVs.size());
-
-        for (KV rawKV : rawKVs) {
-            try {
-                ImmudbProto.Content content = ImmudbProto.Content.parseFrom(rawKV.getValue());
-                kvs.add(new KVPair(rawKV.getKey(), content.getPayload().toByteArray()));
-            } catch (InvalidProtocolBufferException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        return kvs;
+        return getKvs(rawKVs);
     }
 
     public List<KV> rawGetAll(List<?> keyList) {
@@ -342,6 +334,7 @@ public class LedgerComplianceClient {
         }
 
         if (keyList.get(0) instanceof byte[]) {
+            //noinspection unchecked
             return rawGetAllFrom((List<byte[]>)keyList);
         }
 
@@ -359,9 +352,57 @@ public class LedgerComplianceClient {
 
         ImmudbProto.ItemList res = stub.getBatch(builder.build());
 
-        List<KV> result = new ArrayList<>(res.getItemsCount());
+        return getKvs(res);
+    }
 
-        for (ImmudbProto.Item item : res.getItemsList()) {
+    public List<KV> history(String key, long limit, long offset, boolean reverse) {
+        return history(key.getBytes(StandardCharsets.UTF_8), limit, offset, reverse);
+    }
+
+    public List<KV> history(byte[] key, long limit, long offset, boolean reverse) {
+        return convertToStructuredKVList(rawHistory(key, limit, offset, reverse));
+    }
+
+
+    private List<KV> convertToStructuredKVList(List<KV> rawKVs) {
+        assert rawKVs != null;
+        return getKvs(rawKVs);
+    }
+
+    private List<KV> getKvs(List<KV> rawKVs) {
+        List<KV> kvs = new ArrayList<>(rawKVs.size());
+
+        for (KV rawKV : rawKVs) {
+            try {
+                ImmudbProto.Content content = ImmudbProto.Content.parseFrom(rawKV.getValue());
+                kvs.add(new KVPair(rawKV.getKey(), content.getPayload().toByteArray()));
+            } catch (InvalidProtocolBufferException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return kvs;
+    }
+
+    public List<KV> rawHistory(byte[] key, long limit, long offset, boolean reverse) {
+        ImmudbProto.HistoryOptions h = ImmudbProto.HistoryOptions.newBuilder()
+                .setKey(ByteString.copyFrom(key))
+                .setLimit(limit)
+                .setOffset(offset)
+                .setReverse(reverse)
+                .build();
+        ImmudbProto.ItemList res = stub.history(h);
+
+        return buildKVList(res);
+    }
+
+    private List<KV> buildKVList(ImmudbProto.ItemList itemList) {
+        return getKvs(itemList);
+    }
+
+    private List<KV> getKvs(ImmudbProto.ItemList itemList) {
+        List<KV> result = new ArrayList<>(itemList.getItemsCount());
+
+        for (ImmudbProto.Item item : itemList.getItemsList()) {
             KV kv = new KVPair(item.getKey().toByteArray(), item.getValue().toByteArray());
             result.add(kv);
         }
@@ -369,4 +410,105 @@ public class LedgerComplianceClient {
         return result;
     }
 
+    public List<KV> scan(String prefix, String offset, long limit, boolean reverse, boolean deep) {
+        return convertToStructuredKVList(rawScan(prefix, offset, limit, reverse, deep));
+    }
+
+    public List<KV> scan(byte[] prefix, byte[] offset, long limit, boolean reverse, boolean deep) {
+        return convertToStructuredKVList(rawScan(prefix, offset, limit, reverse, deep));
+    }
+
+    public List<KV> rawScan(String prefix, String offset, long limit, boolean reverse, boolean deep) {
+        return rawScan(prefix.getBytes(StandardCharsets.UTF_8), offset.getBytes(StandardCharsets.UTF_8), limit, reverse, deep);
+    }
+
+    public List<KV> rawScan(byte[] prefix, byte[] offset, long limit, boolean reverse, boolean deep) {
+        ImmudbProto.ScanOptions request = ImmudbProto.ScanOptions.newBuilder()
+                .setPrefix(ByteString.copyFrom(prefix))
+                .setOffset(ByteString.copyFrom(offset))
+                .setLimit(limit)
+                .setReverse(reverse)
+                .setDeep(deep)
+                .build();
+
+        ImmudbProto.ItemList res = stub.scan(request);
+        return buildKVList(res);
+    }
+
+    public List<KV> zScan(String set, String offset, long limit, boolean reverse) {
+        return zScan(set.getBytes(StandardCharsets.UTF_8), offset.getBytes(StandardCharsets.UTF_8), limit, reverse);
+    }
+
+    public List<KV> zScan(byte[] set, byte[] offset, long limit, boolean reverse) {
+        return convertToStructuredKVList(rawZScan(set, offset, limit, reverse));
+    }
+
+    public List<KV> rawZScan(byte[] set, byte[] offset, long limit, boolean reverse) {
+        ImmudbProto.ZScanOptions request = ImmudbProto.ZScanOptions.newBuilder()
+                .setSet(ByteString.copyFrom(set))
+                .setOffset(ByteString.copyFrom(offset))
+                .setLimit(limit)
+                .setReverse(reverse)
+                .build();
+
+        ImmudbProto.ZItemList res = stub.zScan(request);
+
+        return buildKVList(res);
+    }
+
+    private List<KV> buildKVList(ImmudbProto.ZItemList zItemList) {
+        List<KV> result = new ArrayList<>(zItemList.getItemsCount());
+
+        for (ImmudbProto.ZItem zItem : zItemList.getItemsList()) {
+            KV kv = new KVPair(zItem.getItem().getKey().toByteArray(), zItem.getItem().getValue().toByteArray());
+            result.add(kv);
+        }
+
+        return result;
+    }
+
+    public void zAdd(String set, String key, double score) {
+        ImmudbProto.Score scoreObject = ImmudbProto.Score.newBuilder()
+                .setScore(score)
+                .build();
+
+        ImmudbProto.ZAddOptions options = ImmudbProto.ZAddOptions.newBuilder()
+                .setSet(ByteString.copyFrom(set, StandardCharsets.UTF_8))
+                .setScore(scoreObject)
+                .setKey(ByteString.copyFrom(key, StandardCharsets.UTF_8))
+                .build();
+        //noinspection ResultOfMethodCallIgnored
+        stub.zAdd(options);
+    }
+
+    public void zAdd(String set, String key, double score, long index) {
+        ImmudbProto.Score scoreObject = ImmudbProto.Score.newBuilder()
+                .setScore(score)
+                .build();
+
+        ImmudbProto.ZAddOptions options = ImmudbProto.ZAddOptions.newBuilder()
+                .setSet(ByteString.copyFrom(set, StandardCharsets.UTF_8))
+                .setScore(scoreObject)
+                .setKey(ByteString.copyFrom(key, StandardCharsets.UTF_8))
+                .setIndex(ImmudbProto.Index.newBuilder()
+                        .setIndex(index)
+                        .build())
+                .build();
+        //noinspection ResultOfMethodCallIgnored
+        stub.zAdd(options);
+    }
+
+    public void reportTamper(byte[] key, long index, ImmudbProto.Signature signature) {
+        Lc.ReportOptions options = Lc.ReportOptions.newBuilder()
+                .setPayload(Lc.TamperReport.newBuilder()
+                .setKey(ByteString.copyFrom(key))
+                .setIndex(index)
+                .setRoot(ByteString.copyFrom(getRoot().getDigest()))
+                .build()
+                )
+                .setSignature(signature)
+                .build();
+        //noinspection ResultOfMethodCallIgnored
+        stub.reportTamper(options);
+    }
 }

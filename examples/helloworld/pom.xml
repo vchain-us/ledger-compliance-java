@@ -24,12 +24,12 @@
         <dependency>
             <groupId>io.codenotary</groupId>
             <artifactId>ledger-compliance-java</artifactId>
-            <version>0.1.1</version>
+            <version>0.3.0</version>
         </dependency>
         <dependency>
             <groupId>io.codenotary</groupId>
             <artifactId>immudb4j</artifactId>
-            <version>0.1.8</version>
+            <version>0.3.0</version>
         </dependency>
     </dependencies>
 

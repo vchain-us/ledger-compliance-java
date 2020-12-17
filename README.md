@@ -50,19 +50,19 @@ if using `Maven`:
     <dependency>
         <groupId>io.codenotary</groupId>
         <artifactId>ledger-compliance-java</artifactId>
-        <version>0.1.0</version>
+        <version>0.3.0</version>
     </dependency> 
     <dependency>
         <groupId>io.codenotary</groupId>
         <artifactId>immudb4j</artifactId>
-        <version>0.1.8</version>
+        <version>0.3.0</version>
     </dependency> 
 ```
 
 if using `Gradle`:
 ```groovy
-    compile 'io.codenotary:ledger-compliance-java:0.1.0'
-    compile 'io.codenotary:immudb4j:0.1.0'
+    compile 'io.codenotary:ledger-compliance-java:0.3.0'
+    compile 'io.codenotary:immudb4j:0.3.0'
 ```
 
 ledger-compliance-java is currently hosted on both [Maven Central] and [Github Packages].
@@ -176,6 +176,23 @@ Atomic multi-key read (all entries are retrieved or none):
         byte[] value = kv.getValue();
         ...
     }
+```
+
+### Scan
+You can scan LC database by prefix, getting keys (and values) based on a given prefix of the key. For this, use method `scan()`.
+
+```java
+   List<KV> scanResults = client.scan(prefix, offset, limit, reverse, deep);
+```
+
+The method return a list of key/values having `prefix` as key prefix. Offset and limit are used to ket only a subset (for paginating large arrays); the boolean `reverse` is used to specify sorting.
+
+### History
+
+To get the history of updates to a key, use `history()` method: given a key, returns a list of all subsequent modification, each with timestamp and index.
+
+```java
+   List<KV> scanResults = client.history(key, limit, offset, reverse);
 ```
 
 ### Closing the client
