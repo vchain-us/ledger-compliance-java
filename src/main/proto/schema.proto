@@ -99,10 +99,23 @@ message KeyValue {
   bytes value = 2;
 }
 
+message Op{
+  oneof operation {
+    KeyValue KVs = 1;
+    ZAddOptions ZOpts = 2;
+    ReferenceOptions ROpts = 3;
+  }
+}
+
+message Ops{
+  repeated Op Operations = 1;
+}
+
 message StructuredKeyValue {
   bytes key = 1;
   Content value = 2;
 }
+
 message Content {
   uint64 timestamp = 1;
   bytes payload = 2;
@@ -140,9 +153,32 @@ message ItemList {
   repeated Item items = 1;
 }
 
+message ZItem {
+  Item item = 1;
+  double score = 2;
+  bytes currentOffset = 3;
+  uint64 index = 4;
+}
+
+message ZItemList {
+  repeated ZItem items = 1;
+}
+
 message StructuredItemList {
   repeated StructuredItem items = 1;
 }
+
+message ZStructuredItemList {
+  repeated ZStructuredItem items = 1;
+}
+
+message ZStructuredItem {
+  StructuredItem item = 1;
+  double score = 2;
+  bytes currentOffset = 3;
+  uint64 index = 4;
+}
+
 
 message Root {
   RootIndex payload = 1;
@@ -238,16 +274,12 @@ message HealthResponse {
 message ReferenceOptions {
   bytes reference = 1;
   bytes key = 2;
+  Index index = 3;
 }
 
-/*
-Why use double as score type?
-Because it is not purely about the storage size, but also use cases.
-64-bit floating point double gives a lot of flexibility and dynamic range, at the expense of having only 53-bits of integer.
-*/
 message ZAddOptions {
   bytes set = 1;
-  double score = 2;
+  Score score = 2;
   bytes key = 3;
   Index index = 4;
 }
@@ -257,6 +289,12 @@ message ZScanOptions {
   bytes offset = 2;
   uint64 limit = 3;
   bool reverse = 4;
+  Score min = 5;
+  Score max = 6;
+}
+
+message Score {
+  double score = 1;
 }
 
 message IScanOptions {
@@ -273,6 +311,13 @@ message SPage {
   repeated StructuredItem items = 1;
   uint64 pageNum  = 2;
   bool more = 3;
+}
+
+message HistoryOptions {
+  bytes key = 1;
+  uint64 offset = 2;
+  uint64 limit = 3;
+  bool reverse = 4;
 }
 
 message SafeZAddOptions {
@@ -316,100 +361,82 @@ message DatabaseListResponse{
 // immudb gRPC
 // IMPORTANT: All get and safeget functions return base64-encoded keys and values, while all set and safeset functions expect base64-encoded inputs.
 service ImmuService {
-  rpc ListUsers (google.protobuf.Empty) returns (UserList){}
+	rpc ListUsers (google.protobuf.Empty) returns (UserList){}
 
-  rpc CreateUser (CreateUserRequest) returns (google.protobuf.Empty){}
+	rpc CreateUser (CreateUserRequest) returns (google.protobuf.Empty){}
 
-  rpc ChangePassword (ChangePasswordRequest) returns (google.protobuf.Empty){}
+	rpc ChangePassword (ChangePasswordRequest) returns (google.protobuf.Empty){}
 
-  rpc UpdateAuthConfig (AuthConfig) returns (google.protobuf.Empty){}
-  rpc UpdateMTLSConfig (MTLSConfig) returns (google.protobuf.Empty){}
+	rpc UpdateAuthConfig (AuthConfig) returns (google.protobuf.Empty){}
+	rpc UpdateMTLSConfig (MTLSConfig) returns (google.protobuf.Empty){}
 
-  rpc PrintTree (google.protobuf.Empty) returns (Tree){}
+	rpc PrintTree (google.protobuf.Empty) returns (Tree){}
 
-  rpc Login (LoginRequest) returns (LoginResponse){}
+	rpc Login (LoginRequest) returns (LoginResponse){}
 
-  rpc Logout (google.protobuf.Empty) returns (google.protobuf.Empty){}
+	rpc Logout (google.protobuf.Empty) returns (google.protobuf.Empty){}
 
-  rpc Set (KeyValue) returns (Index){}
+	rpc Set (KeyValue) returns (Index){}
 
-  rpc SetSV (StructuredKeyValue) returns (Index){}
+	rpc SafeSet(SafeSetOptions) returns (Proof){}
 
-  rpc SafeSet(SafeSetOptions) returns (Proof){}
+	rpc Get (Key) returns (Item){}
 
-  rpc SafeSetSV(SafeSetSVOptions) returns (Proof){}
+	rpc SafeGet(SafeGetOptions) returns (SafeItem){}
 
-  rpc Get (Key) returns (Item){}
+	rpc SetBatch (KVList) returns (Index){}
 
-  rpc GetSV (Key) returns (StructuredItem){}
+	rpc GetBatch (KeyList) returns (ItemList){}
 
-  rpc SafeGet(SafeGetOptions) returns (SafeItem){}
+  rpc ExecAllOps (Ops) returns (Index){}
 
-  rpc SafeGetSV(SafeGetOptions) returns (SafeStructuredItem){}
+	rpc Scan(ScanOptions) returns (ItemList){}
 
-  rpc SetBatch (KVList) returns (Index){}
+	rpc Count(KeyPrefix) returns (ItemsCount){}
 
-  rpc SetBatchSV (SKVList) returns (Index){}
+	rpc CurrentRoot(google.protobuf.Empty) returns (Root) {}
 
-  rpc GetBatch (KeyList) returns (ItemList){}
+	rpc CountAll(google.protobuf.Empty) returns (ItemsCount) {}
 
-  rpc GetBatchSV (KeyList) returns (StructuredItemList){}
+	rpc Inclusion(Index) returns (InclusionProof){}
 
-  rpc Scan(ScanOptions) returns (ItemList){}
+	rpc Consistency(Index) returns (ConsistencyProof){}
 
-  rpc ScanSV(ScanOptions) returns (StructuredItemList){}
+	rpc ByIndex(Index) returns (Item){}
 
-  rpc Count(KeyPrefix) returns (ItemsCount){}
+	rpc BySafeIndex(SafeIndexOptions) returns (SafeItem){}
 
-  rpc CurrentRoot(google.protobuf.Empty) returns (Root) {}
+	rpc History(HistoryOptions) returns (ItemList){}
 
-  rpc CountAll(google.protobuf.Empty) returns (ItemsCount) {}
+	rpc Health (google.protobuf.Empty) returns (HealthResponse){}
 
-  rpc Inclusion(Index) returns (InclusionProof){}
+	rpc Reference (ReferenceOptions) returns (Index){}
 
-  rpc Consistency(Index) returns (ConsistencyProof){}
+  rpc GetReference (Key) returns (Item){}
 
-  rpc ByIndex(Index) returns (Item){}
+	rpc SafeReference (SafeReferenceOptions) returns (Proof){}
 
-  rpc BySafeIndex(SafeIndexOptions) returns (SafeItem){}
+	rpc ZAdd (ZAddOptions) returns (Index){}
 
-  rpc ByIndexSV(Index) returns (StructuredItem){}
+	rpc ZScan (ZScanOptions) returns (ZItemList){}
 
-  rpc History(Key) returns (ItemList){}
+	rpc SafeZAdd (SafeZAddOptions) returns (Proof){}
 
-  rpc HistorySV(Key) returns (StructuredItemList){}
+	rpc IScan (IScanOptions) returns (Page){}
 
-  rpc Health (google.protobuf.Empty) returns (HealthResponse){}
+	rpc Dump(google.protobuf.Empty) returns (stream KVList) {}
 
-  rpc Reference (ReferenceOptions) returns (Index){}
+	// todo(joe-dz): Enable restore when the feature is required again
+	//	rpc Restore(stream KVList) returns (ItemsCount) {}
 
-  rpc SafeReference (SafeReferenceOptions) returns (Proof){}
+	rpc CreateDatabase(Database) returns (google.protobuf.Empty) {}
 
-  rpc ZAdd (ZAddOptions) returns (Index){}
+	rpc UseDatabase(Database) returns (UseDatabaseReply) {}
 
-  rpc ZScan (ZScanOptions) returns (ItemList){}
+	rpc ChangePermission(ChangePermissionRequest) returns (google.protobuf.Empty) {}
 
-  rpc ZScanSV (ZScanOptions) returns (StructuredItemList){}
+	rpc SetActiveUser (SetActiveUserRequest) returns (google.protobuf.Empty){}
 
-  rpc SafeZAdd (SafeZAddOptions) returns (Proof){}
-
-  rpc IScan (IScanOptions) returns (Page){}
-
-  rpc IScanSV (IScanOptions) returns (SPage){}
-
-  rpc Dump(google.protobuf.Empty) returns (stream KVList) {}
-
-  // todo(joe-dz): Enable restore when the feature is required again
-  //	rpc Restore(stream KVList) returns (ItemsCount) {}
-
-  rpc CreateDatabase(Database) returns (google.protobuf.Empty) {}
-
-  rpc UseDatabase(Database) returns (UseDatabaseReply) {}
-
-  rpc ChangePermission(ChangePermissionRequest) returns (google.protobuf.Empty) {}
-
-  rpc SetActiveUser (SetActiveUserRequest) returns (google.protobuf.Empty){}
-
-  rpc DatabaseList (google.protobuf.Empty) returns (DatabaseListResponse){}
+	rpc DatabaseList (google.protobuf.Empty) returns (DatabaseListResponse){}
 
 }

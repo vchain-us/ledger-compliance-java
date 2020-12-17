@@ -50,19 +50,19 @@ if using `Maven`:
     <dependency>
         <groupId>io.codenotary</groupId>
         <artifactId>ledger-compliance-java</artifactId>
-        <version>0.2.0</version>
+        <version>0.3.0</version>
     </dependency> 
     <dependency>
         <groupId>io.codenotary</groupId>
         <artifactId>immudb4j</artifactId>
-        <version>0.2.0</version>
+        <version>0.3.0</version>
     </dependency> 
 ```
 
 if using `Gradle`:
 ```groovy
-    compile 'io.codenotary:ledger-compliance-java:0.2.0'
-    compile 'io.codenotary:immudb4j:0.2.0'
+    compile 'io.codenotary:ledger-compliance-java:0.3.0'
+    compile 'io.codenotary:immudb4j:0.3.0'
 ```
 
 ledger-compliance-java is currently hosted on both [Maven Central] and [Github Packages].

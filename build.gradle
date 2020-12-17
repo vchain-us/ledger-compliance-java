@@ -40,7 +40,7 @@ apply plugin: 'signing'
 
 group = 'io.codenotary'
 archivesBaseName = 'ledger-compliance-java'
-version = '0.2.0'
+version = '0.3.0'
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
@@ -109,7 +109,7 @@ dependencies {
     testCompile 'org.testng:testng:6.8.8'
 
     compile 'javax.annotation:javax.annotation-api:1.2-b01'
-    compile 'io.codenotary:immudb4j:0.2.0'
+    compile 'io.codenotary:immudb4j:0.3.0'
 }
 
 idea {

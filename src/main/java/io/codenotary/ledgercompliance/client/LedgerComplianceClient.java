@@ -26,6 +26,7 @@ import io.codenotary.immudb4j.crypto.VerificationException;
 import io.codenotary.ledgercompliance.client.interceptor.ApiKeyInterceptor;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import lc.schema.Lc;
 import lc.schema.LcServiceGrpc;
 
 import java.nio.charset.StandardCharsets;
@@ -475,11 +476,39 @@ public class LedgerComplianceClient {
                 .setSet(ByteString.copyFrom(set, StandardCharsets.UTF_8))
                 .setScore(scoreObject)
                 .setKey(ByteString.copyFrom(key, StandardCharsets.UTF_8))
+                .build();
+        //noinspection ResultOfMethodCallIgnored
+        stub.zAdd(options);
+    }
+
+    public void zAdd(String set, String key, double score, long index) {
+        ImmudbProto.Score scoreObject = ImmudbProto.Score.newBuilder()
+                .setScore(score)
+                .build();
+
+        ImmudbProto.ZAddOptions options = ImmudbProto.ZAddOptions.newBuilder()
+                .setSet(ByteString.copyFrom(set, StandardCharsets.UTF_8))
+                .setScore(scoreObject)
+                .setKey(ByteString.copyFrom(key, StandardCharsets.UTF_8))
                 .setIndex(ImmudbProto.Index.newBuilder()
-                        .setIndex(getRoot().getIndex())
+                        .setIndex(index)
                         .build())
                 .build();
         //noinspection ResultOfMethodCallIgnored
         stub.zAdd(options);
+    }
+
+    public void reportTamper(byte[] key, long index, ImmudbProto.Signature signature) {
+        Lc.ReportOptions options = Lc.ReportOptions.newBuilder()
+                .setPayload(Lc.TamperReport.newBuilder()
+                .setKey(ByteString.copyFrom(key))
+                .setIndex(index)
+                .setRoot(ByteString.copyFrom(getRoot().getDigest()))
+                .build()
+                )
+                .setSignature(signature)
+                .build();
+        //noinspection ResultOfMethodCallIgnored
+        stub.reportTamper(options);
     }
 }
