@@ -178,6 +178,23 @@ Atomic multi-key read (all entries are retrieved or none):
     }
 ```
 
+### Scan
+You can scan LC database by prefix, getting keys (and values) based on a given prefix of the key. For this, use method `scan()`.
+
+```java
+   List<KV> scanResults = client.scan(prefix, offset, limit, reverse, deep);
+```
+
+The method return a list of key/values having `prefix` as key prefix. Offset and limit are used to ket only a subset (for paginating large arrays); the boolean `reverse` is used to specify sorting.
+
+### History
+
+To get the history of updates to a key, use `history()` method: given a key, returns a list of all subsequent modification, each with timestamp and index.
+
+```java
+   List<KV> scanResults = client.history(key, limit, offset, reverse);
+```
+
 ### Closing the client
 
 To programmatically close the connection with Ledger Compliance instance, use the `shutdown` operation:
