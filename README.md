@@ -102,6 +102,7 @@ Setting Ledger Compliance url, port and API key:
     LedgerComplianceClient lcClient = LedgerComplianceClient.newBuilder()
                                 .setServerUrl("localhost")
                                 .setServerPort(33080)
+                                .setUseTLS(false)
                                 .setApiKey("APIKEYHERE")
                                 .build();
 ```

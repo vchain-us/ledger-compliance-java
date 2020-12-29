@@ -39,6 +39,7 @@ public class App {
             client = LedgerComplianceClient.newBuilder()
                     .setServerUrl("localhost")
                     .setServerPort(33080)
+                    .setUseTLS(false)
                     .setApiKey("APIKEYHERE")
                     .setRootHolder(rootHolder)
                     .build();

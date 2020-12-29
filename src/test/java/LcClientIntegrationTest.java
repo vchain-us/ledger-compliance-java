@@ -33,6 +33,7 @@ public abstract class LcClientIntegrationTest {
             .setRootHolder(rootHolder)
             .setServerUrl("localhost")
             .setServerPort(33080)
+            .setUseTLS(false)
             .setApiKey("APIKEYHERE")
             .build();
   }

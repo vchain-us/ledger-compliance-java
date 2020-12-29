@@ -24,7 +24,7 @@
         <dependency>
             <groupId>io.codenotary</groupId>
             <artifactId>ledger-compliance-java</artifactId>
-            <version>0.3.0</version>
+            <version>0.3.1</version>
         </dependency>
         <dependency>
             <groupId>io.codenotary</groupId>

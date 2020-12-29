@@ -55,11 +55,17 @@ public class LedgerComplianceClient {
     }
 
     private LcServiceGrpc.LcServiceBlockingStub createStubFrom(LedgerComplianceClientBuilder builder) {
-        channel =
-                ManagedChannelBuilder.forAddress(builder.getServerUrl(), builder.getServerPort())
-                        .usePlaintext()
+        ManagedChannelBuilder<?> managedChannelBuilder = ManagedChannelBuilder.forAddress(builder.getServerUrl(),
+                builder.getServerPort());
+
+        if (!builder.isUseTLS()) {
+            managedChannelBuilder = managedChannelBuilder.usePlaintext();
+        }
+
+        channel = managedChannelBuilder
                         .intercept(new ApiKeyInterceptor(apiKey))
                         .build();
+
         return LcServiceGrpc.newBlockingStub(channel);
     }
 
@@ -82,10 +88,13 @@ public class LedgerComplianceClient {
 
         private RootHolder rootHolder;
 
+        private boolean useTLS;
+
         private LedgerComplianceClientBuilder() {
             this.serverUrl = "localhost";
             this.serverPort = 3322;
             this.rootHolder = new SerializableRootHolder();
+            this.useTLS = true;
         }
 
         public LedgerComplianceClient build() {
@@ -108,6 +117,10 @@ public class LedgerComplianceClient {
             return apiKey;
         }
 
+        public boolean isUseTLS() {
+            return useTLS;
+        }
+
         public LedgerComplianceClientBuilder setServerUrl(String serverUrl) {
             this.serverUrl = serverUrl;
             return this;
@@ -125,6 +138,11 @@ public class LedgerComplianceClient {
 
         public LedgerComplianceClientBuilder setApiKey(String apiKey) {
             this.apiKey = apiKey;
+            return this;
+        }
+
+        public LedgerComplianceClientBuilder setUseTLS(boolean useTLS) {
+            this.useTLS = useTLS;
             return this;
         }
     }
