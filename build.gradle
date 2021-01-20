@@ -29,6 +29,8 @@ plugins {
     id 'java-library'
     id 'jacoco'
     id 'com.github.kt3k.coveralls' version '2.8.4'
+    id "com.github.hierynomus.license" version "0.15.0"
+    id "com.github.hierynomus.license-report" version "0.15.0"
 }
 
 apply plugin: 'java'
@@ -121,6 +123,11 @@ idea {
 
 test {
     useTestNG()
+}
+
+downloadLicenses {
+    dependencyConfiguration ='compile'
+    includeProjectDependencies true
 }
 
 test.finalizedBy([jacocoTestReport])
