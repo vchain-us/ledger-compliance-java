@@ -25,7 +25,8 @@ src/generated/**
 
 **/.DS_Store
 
-roots/
+## The directory where states are stored.
+states/
 
 *.iml
 *.ipr

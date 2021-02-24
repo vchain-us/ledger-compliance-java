@@ -1,5 +1,5 @@
 /*
-Copyright 2019-2020 vChain, Inc.
+Copyright 2021 CodeNotary, Inc. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,110 +16,99 @@ limitations under the License.
 
 import com.google.common.base.Charsets;
 import io.codenotary.immudb4j.KV;
-import io.codenotary.immudb4j.KVList;
-import io.codenotary.immudb4j.crypto.VerificationException;
+import io.codenotary.immudb4j.exceptions.VerificationException;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 
 public class BasicLcClientTest extends LcClientIntegrationTest {
 
-  @Test
-  public void testGet() throws VerificationException {
-    byte[] v0 = new byte[] {0, 1, 2, 3};
-    byte[] v1 = new byte[] {3, 2, 1, 0};
+    @Test(testName = "set, get, safeGet")
+    public void t1() throws VerificationException {
 
-    lcClient.set("k0", v0);
-    lcClient.set("k1", v1);
+        String k1 = "bct_t1__k1";
+        byte[] k2 = "bct_t1__k2".getBytes(StandardCharsets.UTF_8);
+        byte[] v1 = "BasicLcClientTest_t1__v0".getBytes(StandardCharsets.UTF_8);
+        byte[] v2 = "BasicLcClientTest_t1__v1".getBytes(StandardCharsets.UTF_8);
 
-    byte[] rv0 = lcClient.get("k0");
-    byte[] rv1 = lcClient.get("k1");
 
-    Assert.assertEquals(v0, rv0);
-    Assert.assertEquals(v1, rv1);
+        lcClient.set("k0", v1);
+        lcClient.set("k1", v2);
 
-    byte[] sv0 = lcClient.safeGet("k0");
-    byte[] sv1 = lcClient.safeGet("k1");
+        byte[] gv0 = lcClient.get("k0");
+        byte[] gv1 = lcClient.get("k1");
 
-    Assert.assertEquals(sv0, v0);
-    Assert.assertEquals(sv1, v1);
+        Assert.assertEquals(v1, gv0);
+        Assert.assertEquals(v2, gv1);
 
-    byte[] v2 = new byte[] {0, 1, 2, 3};
+        byte[] vgv0 = lcClient.verifiedGet("k0");
+        byte[] vgv1 = lcClient.verifiedGet("k1");
 
-    lcClient.safeSet("k2", v2);
-    byte[] sv2 = lcClient.safeGet("k2");
-    Assert.assertEquals(v2, sv2);
+        Assert.assertEquals(vgv0, v1);
+        Assert.assertEquals(vgv1, v2);
 
-  }
-
-  @Test
-  public void testRawGetAndSet() throws VerificationException {
-    byte[] v0 = new byte[] {0, 1, 2, 3};
-    byte[] v1 = new byte[] {3, 2, 1, 0};
-
-    lcClient.rawSet("rawk0", v0);
-    lcClient.rawSet("rawk1", v1);
-
-    byte[] rv0 = lcClient.rawGet("rawk0");
-    byte[] rv1 = lcClient.rawGet("rawk1");
-
-    Assert.assertEquals(v0, rv0);
-    Assert.assertEquals(v1, rv1);
-
-    byte[] sv0 = lcClient.safeRawGet("rawk0");
-    byte[] sv1 = lcClient.safeRawGet("rawk1");
-
-    Assert.assertEquals(sv0, v0);
-    Assert.assertEquals(sv1, v1);
-
-    byte[] v2 = new byte[] {0, 1, 2, 3};
-
-    lcClient.safeRawSet("rawk2", v2);
-    byte[] sv2 = lcClient.safeRawGet("rawk2");
-    Assert.assertEquals(v2, sv2);
-
-  }
-
-  @Test
-  public void testGetAllAndSetAll() {
-
-    List<String> keys = new ArrayList<>();
-    keys.add("k0");
-    keys.add("k1");
-
-    List<byte[]> values = new ArrayList<>();
-    values.add(new byte[] {0, 1, 0, 1});
-    values.add(new byte[] {1, 0, 1, 0});
-
-    KVList.KVListBuilder kvListBuilder = KVList.newBuilder();
-
-    for (int i = 0; i < keys.size(); i++) {
-      kvListBuilder.add(keys.get(i), values.get(i));
     }
 
-    KVList kvList = kvListBuilder.addAll(new LinkedList<>()).build();
+    @Test(testName = "verified Set & Get")
+    public void t2() throws VerificationException {
 
-    lcClient.setAll(kvList);
+        String k1 = "bct_t2__k1";
+        byte[] k2 = "bct_t2__k2".getBytes(StandardCharsets.UTF_8);
+        byte[] v1 = "BasicLcClientTest_t2__v1".getBytes(StandardCharsets.UTF_8);
+        byte[] v2 = "BasicLcClientTest_t2__v2".getBytes(StandardCharsets.UTF_8);
 
-    List<KV> getAllResult = lcClient.getAll(keys);
+        lcClient.verifiedSet(k1, v1);
+        lcClient.verifiedSet(k2, v2);
 
-    Assert.assertNotNull(getAllResult);
-    Assert.assertEquals(keys.size(), getAllResult.size());
+        byte[] vgv1 = lcClient.verifiedGet(k1);
+        byte[] vgv2 = lcClient.verifiedGet(k2);
 
-    for (int i = 0; i < getAllResult.size(); i++) {
-      KV kv = getAllResult.get(i);
-      Assert.assertEquals(kv.getKey(), keys.get(i).getBytes(Charsets.UTF_8));
-      Assert.assertEquals(kv.getValue(), values.get(i));
+        Assert.assertEquals(vgv1, v1);
+        Assert.assertEquals(vgv2, v2);
+
     }
 
-    for (int i = 0; i < keys.size(); i++) {
-      byte[] v = lcClient.get(keys.get(i));
-      Assert.assertEquals(v, values.get(i));
-    }
+    @Test(testName = "set, getAll")
+    public void t3() {
 
-  }
+        List<String> keys = new ArrayList<>();
+        keys.add("bct_t3__k1");
+        keys.add("bct_t3__k2");
+
+        List<byte[]> values = new ArrayList<>();
+        values.add("BasicLcClientTest_t3__v1".getBytes(StandardCharsets.UTF_8));
+        values.add(new byte[]{1, 0, 1, 0});
+
+        // KVList.KVListBuilder kvListBuilder = KVList.newBuilder();
+
+        for (int i = 0; i < keys.size(); i++) {
+            //kvListBuilder.add(keys.get(i), values.get(i));
+            lcClient.set(keys.get(i), values.get(i));
+        }
+
+        // Not used, since it's not yet implemented on the server.
+        // KVList kvList = kvListBuilder.addAll(new LinkedList<>()).build();
+        // lcClient.setAll(kvList);
+
+        List<KV> getAllResult = lcClient.getAll(keys);
+
+        Assert.assertNotNull(getAllResult);
+        Assert.assertEquals(keys.size(), getAllResult.size());
+
+        for (int i = 0; i < getAllResult.size(); i++) {
+            KV kv = getAllResult.get(i);
+            Assert.assertEquals(kv.getKey(), keys.get(i).getBytes(Charsets.UTF_8));
+            Assert.assertEquals(kv.getValue(), values.get(i));
+        }
+
+        for (int i = 0; i < keys.size(); i++) {
+            byte[] v = lcClient.get(keys.get(i));
+            Assert.assertEquals(v, values.get(i));
+        }
+
+    }
 
 }

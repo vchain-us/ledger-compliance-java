@@ -13,23 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+package io.codenotary.ledgercompliance.client;
 
-import org.testng.Assert;
-import org.testng.annotations.Test;
+public class LedgerComplianceExceptions {
 
-public class ShutdownTest extends LcClientIntegrationTest {
+    public static final String CORRUPTED_DATA = "data is corrupted";
 
-    @Test(testName = "Login attempt after shutdown", expectedExceptions = RuntimeException.class)
-    public void t1() {
 
-        Assert.assertFalse(lcClient.isShutdown());
-
-        lcClient.shutdown();
-
-        Assert.assertTrue(lcClient.isShutdown());
-
-        lcClient.get("LedgerCompliance");
-
+    private LedgerComplianceExceptions() {
     }
 
 }
