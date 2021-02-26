@@ -1,3 +1,18 @@
+/*
+Copyright 2021 CodeNotary, Inc. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 syntax = "proto3";
 
 import "schema.proto";
@@ -38,18 +53,18 @@ message Response {
   int32 status = 1;
   string msg = 2;
   int64 msgID = 3;
-  immudb.schema.Proof proof = 4;
-  immudb.schema.Root root = 5;
+  immudb.schema.VerifiableTx VerifiableTx = 4;
+  immudb.schema.ImmutableState state = 5;
 }
 
-message SafeItemExt {
-  immudb.schema.SafeItem item  = 1;
+message VerifiableItemExt {
+  immudb.schema.VerifiableEntry item  = 1;
   google.protobuf.Timestamp timestamp = 2;
 }
 
 
 message ItemExt {
-  immudb.schema.Item item = 1;
+  immudb.schema.Entry item = 1;
   google.protobuf.Timestamp timestamp = 2;
 }
 
@@ -59,7 +74,7 @@ message ItemExtList {
 
 
 message ZItemExt {
-  immudb.schema.ZItem item = 1;
+  immudb.schema.ZEntry item = 1;
   google.protobuf.Timestamp timestamp = 2;
 }
 
@@ -70,32 +85,29 @@ message ZItemExtList {
 service LcService {
   // immudb primitives
   // setters and getters
-  rpc Set (immudb.schema.KeyValue) returns (immudb.schema.Index){};
-  rpc Get (immudb.schema.Key) returns (immudb.schema.Item){};
-  rpc SafeSet(immudb.schema.SafeSetOptions) returns (immudb.schema.Proof){};
-  rpc SafeGet(immudb.schema.SafeGetOptions) returns (immudb.schema.SafeItem){};
-  // tamper proofing
-  rpc Consistency(immudb.schema.Index) returns (immudb.schema.ConsistencyProof){};
-  rpc Inclusion(immudb.schema.Index) returns (immudb.schema.InclusionProof){};
+  rpc Set (immudb.schema.SetRequest) returns (immudb.schema.TxMetadata){};
+  rpc Get (immudb.schema.KeyRequest) returns (immudb.schema.Entry){};
+  rpc VerifiableSet (immudb.schema.VerifiableSetRequest) returns (immudb.schema.VerifiableTx){};
+  rpc VerifiableGet (immudb.schema.VerifiableGetRequest) returns (immudb.schema.VerifiableEntry){};
   // batch
-  rpc SetBatch (immudb.schema.KVList) returns (immudb.schema.Index){};
-  rpc GetBatch (immudb.schema.KeyList) returns (immudb.schema.ItemList){};
-  rpc ExecAllOps (immudb.schema.Ops) returns (immudb.schema.Index){};
+  rpc GetAll (immudb.schema.KeyListRequest) returns (immudb.schema.Entries){};
+  rpc ExecAll (immudb.schema.ExecAllRequest) returns (immudb.schema.TxMetadata) {};
   // scanners
-  rpc Scan(immudb.schema.ScanOptions) returns (immudb.schema.ItemList){};
-  rpc History(immudb.schema.HistoryOptions) returns (immudb.schema.ItemList){};
-  rpc ZAdd (immudb.schema.ZAddOptions) returns (immudb.schema.Index){};
-  rpc SafeZAdd (immudb.schema.SafeZAddOptions) returns (immudb.schema.Proof){};
-  rpc ZScan (immudb.schema.ZScanOptions) returns (immudb.schema.ZItemList){};
+  rpc Scan(immudb.schema.ScanRequest) returns (immudb.schema.Entries){};
+  rpc History(immudb.schema.HistoryRequest) returns (immudb.schema.Entries){};
+  rpc ZAdd (immudb.schema.ZAddRequest) returns (immudb.schema.TxMetadata){};
+  rpc VerifiableZAdd (immudb.schema.VerifiableZAddRequest) returns (immudb.schema.VerifiableTx){};
+  rpc ZScan (immudb.schema.ZScanRequest) returns (immudb.schema.ZEntries){};
   // mixed
-  rpc CurrentRoot(google.protobuf.Empty) returns (immudb.schema.Root) {};
+  rpc CurrentState (google.protobuf.Empty) returns (immudb.schema.ImmutableState){};
+
   rpc Health (google.protobuf.Empty) returns (immudb.schema.HealthResponse){};
   // ledger compliance extensions
   rpc ReportTamper(ReportOptions) returns (google.protobuf.Empty){};
-  rpc SendData (stream Data) returns (stream Response);
+  rpc SendData (stream Data) returns (stream Response){};
   // ledger compliance extensions - items extended with additional properties managed by LC backend (date)
-  rpc SafeGetExt(immudb.schema.SafeGetOptions) returns (SafeItemExt){};
-  rpc ZScanExt (immudb.schema.ZScanOptions) returns (ZItemExtList){};
-  rpc HistoryExt(immudb.schema.HistoryOptions) returns (ItemExtList){};
+  rpc VerifiableGetExt(immudb.schema.VerifiableGetRequest) returns (VerifiableItemExt){};
+  rpc ZScanExt (immudb.schema.ZScanRequest) returns (ZItemExtList){};
+  rpc HistoryExt(immudb.schema.HistoryRequest) returns (ItemExtList){};
 
 }

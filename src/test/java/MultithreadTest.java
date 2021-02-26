@@ -1,5 +1,5 @@
 /*
-Copyright 2019-2020 vChain, Inc.
+Copyright 2021 CodeNotary, Inc. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import io.codenotary.immudb4j.crypto.VerificationException;
+import io.codenotary.immudb4j.exceptions.VerificationException;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -23,99 +23,102 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
+
 public class MultithreadTest extends LcClientIntegrationTest {
 
-  @Test
-  public void testMultithredWithoutKeyOverlap() throws InterruptedException, VerificationException {
-    final int threadCount = 10;
-    final int keyCount = 100;
+    @Test(testName = "Multithread without key overlap")
+    public void t1() throws InterruptedException, VerificationException {
 
-    CountDownLatch latch = new CountDownLatch(threadCount);
-    AtomicInteger succeeded = new AtomicInteger(0);
+        final int threadCount = 10;
+        final int keyCount = 100;
 
-    Function<String, Runnable> workerFactory = (uuid) -> (Runnable) () -> {
-      Random rnd = new Random();
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicInteger succeeded = new AtomicInteger(0);
 
-      for (int i = 0; i < keyCount; i++) {
-        byte[] b = new byte[10];
-        rnd.nextBytes(b);
+        Function<String, Runnable> workerFactory = (uuid) -> (Runnable) () -> {
+            Random rnd = new Random();
 
-        try {
-          lcClient.safeSet(uuid + "k" + i, b);
-          System.out.printf("safe set key %d\n", i);
-        } catch (Exception e) {
-          latch.countDown();
-          throw new RuntimeException(e);
+            for (int i = 0; i < keyCount; i++) {
+                byte[] b = new byte[10];
+                rnd.nextBytes(b);
+
+                try {
+                    lcClient.verifiedSet(uuid + "k" + i, b);
+                    System.out.printf("verifiedSet key %d\n", i);
+                } catch (Exception e) {
+                    latch.countDown();
+                    throw new RuntimeException(e);
+                }
+            }
+
+            succeeded.incrementAndGet();
+            latch.countDown();
+        };
+
+        for (int i = 0; i < threadCount; i++) {
+            Thread t = new Thread(workerFactory.apply("t" + i));
+            t.start();
+            System.out.printf("[thread %d] Started\n", i);
         }
-      }
 
-      succeeded.incrementAndGet();
-      latch.countDown();
-    };
+        latch.await();
 
-    for(int i=0;i<threadCount;i++) {
-      Thread t = new Thread(workerFactory.apply("t"+i));
-      t.start();
-      System.out.println("Started thread");
-    }
+        Assert.assertEquals(succeeded.get(), threadCount);
 
-    latch.await();
-
-    Assert.assertEquals(succeeded.get(), threadCount);
-
-    for(int i=0;i<threadCount;i++) {
-      for (int k = 0; k < keyCount; k++) {
-        lcClient.safeGet("t" + i + "k" + i);
-        System.out.printf("Safe get key %d by thread %d\n", k, i);
-      }
-    }
-
-  }
-
-  @Test
-  public void testMultithredWithKeyOverlap() throws InterruptedException, VerificationException {
-    final int threadCount = 10;
-    final int keyCount = 100;
-
-    CountDownLatch latch = new CountDownLatch(threadCount);
-    AtomicInteger succeeded = new AtomicInteger(0);
-
-    Runnable runnable = () -> {
-      Random rnd = new Random();
-
-      for (int i = 0; i < keyCount; i++) {
-        byte[] b = new byte[10];
-        rnd.nextBytes(b);
-
-        try {
-          lcClient.safeSet("k" + i, b);
-          System.out.printf("safe set key %d\n", i);
-        } catch (Exception e) {
-          latch.countDown();
-          throw new RuntimeException(e);
+        for (int i = 0; i < threadCount; i++) {
+            for (int k = 0; k < keyCount; k++) {
+                lcClient.verifiedGet("t" + i + "k" + i);
+                System.out.printf("[thread %d] verifiedGet of key %d\n", i, k);
+            }
         }
-      }
 
-      succeeded.incrementAndGet();
-      latch.countDown();
-    };
-
-    for(int i=0;i<threadCount;i++) {
-      Thread t = new Thread(runnable);
-      t.start();
-      System.out.println("Started thread");
     }
 
-    latch.await();
+    @Test(testName = "Multithread with key overlap")
+    public void t2() throws InterruptedException, VerificationException {
 
-    Assert.assertEquals(succeeded.get(), threadCount);
+        final int threadCount = 10;
+        final int keyCount = 100;
 
-    for(int i=0;i<threadCount;i++) {
-      for (int k = 0; k < keyCount; k++) {
-        lcClient.safeGet("k" + i);
-        System.out.printf("Safe get key %d by thread %d\n", k, i);
-      }
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicInteger succeeded = new AtomicInteger(0);
+
+        Runnable runnable = () -> {
+            Random rnd = new Random();
+
+            for (int i = 0; i < keyCount; i++) {
+                byte[] b = new byte[10];
+                rnd.nextBytes(b);
+
+                try {
+                    lcClient.verifiedSet("k" + i, b);
+                    System.out.printf("verifiedSet key %d\n", i);
+                } catch (Exception e) {
+                    latch.countDown();
+                    throw new RuntimeException(e);
+                }
+            }
+
+            succeeded.incrementAndGet();
+            latch.countDown();
+        };
+
+        for (int i = 0; i < threadCount; i++) {
+            Thread t = new Thread(runnable);
+            t.start();
+            System.out.printf("[thread %d] Started\n", i);
+        }
+
+        latch.await();
+
+        Assert.assertEquals(succeeded.get(), threadCount);
+
+        for (int i = 0; i < threadCount; i++) {
+            for (int k = 0; k < keyCount; k++) {
+                lcClient.verifiedGet("k" + i);
+                System.out.printf("[thread %d] verifiedGet key %d\n", i, k);
+            }
+        }
+
     }
-
-  }
 }

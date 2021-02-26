@@ -17,18 +17,12 @@ limitations under the License.
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-public class ShutdownTest extends LcClientIntegrationTest {
+public class HealthTest extends LcClientIntegrationTest {
 
-    @Test(testName = "Login attempt after shutdown", expectedExceptions = RuntimeException.class)
+    @Test(testName = "Simple test of health")
     public void t1() {
 
-        Assert.assertFalse(lcClient.isShutdown());
-
-        lcClient.shutdown();
-
-        Assert.assertTrue(lcClient.isShutdown());
-
-        lcClient.get("LedgerCompliance");
+        Assert.assertTrue(lcClient.health());
 
     }
 
