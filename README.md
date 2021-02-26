@@ -50,7 +50,7 @@ if using `Maven`:
     <dependency>
         <groupId>io.codenotary</groupId>
         <artifactId>ledger-compliance-java</artifactId>
-        <version>0.3.0</version>
+        <version>0.3.1</version>
     </dependency> 
     <dependency>
         <groupId>io.codenotary</groupId>
@@ -61,7 +61,7 @@ if using `Maven`:
 
 if using `Gradle`:
 ```groovy
-    compile 'io.codenotary:ledger-compliance-java:0.3.0'
+    compile 'io.codenotary:ledger-compliance-java:0.3.1'
     compile 'io.codenotary:immudb4j:0.3.0'
 ```
 
