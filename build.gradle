@@ -30,8 +30,6 @@ plugins {
     id 'jacoco'
     id 'com.github.kt3k.coveralls' version '2.10.2'
     id 'com.google.protobuf' version '0.8.14'
-    id "com.github.hierynomus.license" version "0.15.0"
-    id "com.github.hierynomus.license-report" version "0.15.0"
 }
 
 apply plugin: 'java'
@@ -43,7 +41,7 @@ apply plugin: 'signing'
 
 group = 'io.codenotary'
 archivesBaseName = 'ledger-compliance-java'
-version = '0.9.0'
+version = '2.1.5.0'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
@@ -121,7 +119,7 @@ dependencies {
     testCompile 'org.testng:testng:6.8.8'
 
     compile 'javax.annotation:javax.annotation-api:1.2-b01'
-    compile 'io.codenotary:immudb4j:0.9.0.2'
+    compile 'io.codenotary:immudb4j:0.9.0.4'
 }
 
 idea {
@@ -133,11 +131,6 @@ idea {
 
 test {
     useTestNG()
-}
-
-downloadLicenses {
-    dependencyConfiguration ='compile'
-    includeProjectDependencies true
 }
 
 test.finalizedBy([jacocoTestReport])

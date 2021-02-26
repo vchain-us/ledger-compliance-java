@@ -679,13 +679,13 @@ public class LedgerComplianceClient {
     public void reportTamper(byte[] key, long index, ImmudbProto.Signature signature) {
 
         Lc.ReportOptions options = Lc.ReportOptions.newBuilder()
-                .withPayload(Lc.TamperReport.newBuilder()
-                        .withKey(ByteString.copyFrom(key))
-                        .withIndex(index)
-                        .withRoot(ByteString.copyFrom(state().txHash))
+                .setPayload(Lc.TamperReport.newBuilder()
+                        .setKey(ByteString.copyFrom(key))
+                        .setIndex(index)
+                        .setRoot(ByteString.copyFrom(state().txHash))
                         .build()
                 )
-                .withSignature(signature)
+                .setSignature(signature)
                 .build();
         //noinspection ResultOfMethodCallIgnored
         stub.reportTamper(options);
