@@ -19,7 +19,7 @@ import io.grpc.*;
 
 public class ApiKeyInterceptor implements ClientInterceptor {
 
-    private String apiKey;
+    private final String apiKey;
 
     public ApiKeyInterceptor(String apiKey) {
         this.apiKey = apiKey;

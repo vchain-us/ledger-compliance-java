@@ -29,18 +29,23 @@ public abstract class LcClientIntegrationTest {
 
     @BeforeClass
     public static void beforeClass() throws IOException {
+
         FileImmuStateHolder stateHolder = FileImmuStateHolder.newBuilder()
-                .setStatesFolder("states")
+                .withStatesFolder("states")
                 .build();
 
         lcClient = LedgerComplianceClient.newBuilder()
-                .setStateHolder(stateHolder)
-                .setServerUrl("localhost")
-                .setServerPort(33080)
-//                .setServerPort(3324)
-                .setUseTLS(false)
-                .setApiKey(API_KEY)
+                .withStateHolder(stateHolder)
+                .withServerUrl("localhost")
+                // Note: In a minimal setup, you can have just the DataService (that listens on :3324)
+                //       and immudb server running. Of course, a little more (but not the whole stack)
+                //       means starting also Postgres, Server, UI, and SearchCacheSync components.
+                //.withServerPort(3324)
+                .withServerPort(33080)
+                .withTLS(false)
+                .withApiKey(API_KEY)
                 .build();
+
     }
 
 }

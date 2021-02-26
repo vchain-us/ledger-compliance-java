@@ -77,10 +77,12 @@ public class ScanHistoryTest extends LcClientIntegrationTest {
         byte[] value1 = {0, 1, 2, 3};
         byte[] value2 = {4, 5, 6, 7};
 
-        lcClient.set("scan1", value1);
-        lcClient.set("scan2", value2);
+        String keyPrefix = "ScanHistoryTest_t2__scan";
 
-        List<KV> scan = lcClient.scan("scan", 1, 5, false);
+        lcClient.set(keyPrefix + "1", value1);
+        lcClient.set(keyPrefix + "2", value2);
+
+        List<KV> scan = lcClient.scan(keyPrefix, 1, 5, false);
 
         Assert.assertEquals(scan.size(), 2);
         Assert.assertEquals(scan.get(0).getKey(), "scan1".getBytes(StandardCharsets.UTF_8));
@@ -95,36 +97,44 @@ public class ScanHistoryTest extends LcClientIntegrationTest {
         byte[] value1 = {0, 1, 2, 3};
         byte[] value2 = {4, 5, 6, 7};
 
-        lcClient.set("zadd1", value1);
-        lcClient.set("zadd2", value2);
+        String keyPrefix = "ScanHistoryTest_t3__";
+        String set1 = keyPrefix + "set1";
+        String set2 = keyPrefix + "set2";
+        String zadd1 = keyPrefix + "zadd1";
+        String zadd2 = keyPrefix + "zadd2";
+
+        lcClient.set(zadd1, value1);
+        lcClient.set(zadd2, value2);
 
         TxMetadata set1TxMd = null;
         TxMetadata set2TxMd = null;
-        try {
-            lcClient.zAdd("set1", 1, "zadd1");
-            set1TxMd = lcClient.zAdd("set1", 2, "zadd2");
 
-            lcClient.zAdd("set2", 2, "zadd1");
-            set2TxMd = lcClient.zAdd("set2", 1, "zadd2");
+        try {
+
+            lcClient.zAdd(set1, 1, zadd1);
+            set1TxMd = lcClient.zAdd(set1, 2, zadd2);
+
+            lcClient.zAdd(set2, 2, zadd1);
+            set2TxMd = lcClient.zAdd(set2, 1, zadd2);
+
         } catch (CorruptedDataException e) {
             Assert.fail("Failed to zAdd", e);
         }
 
-
-        List<KV> zScan1 = lcClient.zScan("set1", set1TxMd.id, 5, false);
+        List<KV> zScan1 = lcClient.zScan(set1, set1TxMd.id, 5, false);
 
         Assert.assertEquals(zScan1.size(), 2);
-        Assert.assertEquals(zScan1.get(0).getKey(), "zadd1".getBytes(StandardCharsets.UTF_8));
+        Assert.assertEquals(zScan1.get(0).getKey(), zadd1.getBytes(StandardCharsets.UTF_8));
         Assert.assertEquals(zScan1.get(0).getValue(), value1);
-        Assert.assertEquals(zScan1.get(1).getKey(), "zadd2".getBytes(StandardCharsets.UTF_8));
+        Assert.assertEquals(zScan1.get(1).getKey(), zadd2.getBytes(StandardCharsets.UTF_8));
         Assert.assertEquals(zScan1.get(1).getValue(), value2);
 
-        List<KV> zScan2 = lcClient.zScan("set2", set2TxMd.id, 5, false);
+        List<KV> zScan2 = lcClient.zScan(set2, set2TxMd.id, 5, false);
 
         Assert.assertEquals(zScan2.size(), 2);
-        Assert.assertEquals(zScan2.get(0).getKey(), "zadd2".getBytes(StandardCharsets.UTF_8));
+        Assert.assertEquals(zScan2.get(0).getKey(), zadd2.getBytes(StandardCharsets.UTF_8));
         Assert.assertEquals(zScan2.get(0).getValue(), value2);
-        Assert.assertEquals(zScan2.get(1).getKey(), "zadd1".getBytes(StandardCharsets.UTF_8));
+        Assert.assertEquals(zScan2.get(1).getKey(), zadd1.getBytes(StandardCharsets.UTF_8));
         Assert.assertEquals(zScan2.get(1).getValue(), value1);
     }
 

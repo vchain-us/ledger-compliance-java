@@ -34,6 +34,7 @@ import lc.schema.LcServiceGrpc;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -50,15 +51,24 @@ public class LedgerComplianceClient {
 
     private ManagedChannel channel;
     private final LcServiceGrpc.LcServiceBlockingStub stub;
+    private final String serverId;
     private final String apiKey;
     private final ImmuStateHolder stateHolder;
 
+    /**
+     * Create a new CNLC Java Client instance based on the provided builder.
+     */
     public LedgerComplianceClient(LedgerComplianceClientBuilder builder) {
+        this.serverId = Base64.getEncoder()
+                .encodeToString((builder.serverUrl + builder.serverPort).getBytes(StandardCharsets.UTF_8));
         this.apiKey = builder.getApiKey();
-        this.stub = createStubFrom(builder);
         this.stateHolder = builder.getStateHolder();
+        this.stub = createStubFrom(builder);
     }
 
+    /**
+     * Get a new builder instance for creating a CNLC Java Client instance.
+     */
     public static LedgerComplianceClient.LedgerComplianceClientBuilder newBuilder() {
         return new LedgerComplianceClient.LedgerComplianceClientBuilder();
     }
@@ -79,15 +89,25 @@ public class LedgerComplianceClient {
         return LcServiceGrpc.newBlockingStub(channel);
     }
 
+    /**
+     * Shutdown the client: terminate any server connection and release resources.
+     * After this call, a new client instance needs to be created, if needed.
+     */
     public synchronized void shutdown() {
         channel.shutdown();
         channel = null;
     }
 
+    /**
+     * Tell if the client is shut down.
+     */
     public synchronized boolean isShutdown() {
         return channel == null;
     }
 
+    /**
+     * The builder used for creating a CNLC Java Client instance.
+     */
     public static class LedgerComplianceClientBuilder {
 
         private String serverUrl;
@@ -119,7 +139,7 @@ public class LedgerComplianceClient {
             return apiKey;
         }
 
-        public LedgerComplianceClientBuilder setApiKey(String apiKey) {
+        public LedgerComplianceClientBuilder withApiKey(String apiKey) {
             this.apiKey = apiKey;
             return this;
         }
@@ -128,12 +148,12 @@ public class LedgerComplianceClient {
             return useTLS;
         }
 
-        public LedgerComplianceClientBuilder setServerUrl(String serverUrl) {
+        public LedgerComplianceClientBuilder withServerUrl(String serverUrl) {
             this.serverUrl = serverUrl;
             return this;
         }
 
-        public LedgerComplianceClientBuilder setServerPort(int serverPort) {
+        public LedgerComplianceClientBuilder withServerPort(int serverPort) {
             this.serverPort = serverPort;
             return this;
         }
@@ -142,12 +162,12 @@ public class LedgerComplianceClient {
             return stateHolder;
         }
 
-        public LedgerComplianceClientBuilder setStateHolder(ImmuStateHolder stateHolder) {
+        public LedgerComplianceClientBuilder withStateHolder(ImmuStateHolder stateHolder) {
             this.stateHolder = stateHolder;
             return this;
         }
 
-        public LedgerComplianceClientBuilder setUseTLS(boolean useTLS) {
+        public LedgerComplianceClientBuilder withTLS(boolean useTLS) {
             this.useTLS = useTLS;
             return this;
         }
@@ -155,13 +175,13 @@ public class LedgerComplianceClient {
 
     /**
      * Get the locally saved state of the ledger.
-     * If nothing exists already, it is fetched from the remove server and save it locally.
+     * If nothing exists already, it is fetched from the server and save it locally.
      */
     public ImmuState state() {
-        ImmuState state = stateHolder.getState(apiKey);
+        ImmuState state = stateHolder.getState(serverId, apiKey);
         if (state == null) {
             state = currentState();
-            stateHolder.setState(state);
+            stateHolder.setState(serverId, state);
         }
         return state;
     }
@@ -184,10 +204,16 @@ public class LedgerComplianceClient {
     // ========== SET ==========
     //
 
+    /**
+     * Set the provided key and value pair into the connected ledger.
+     */
     public void set(String key, byte[] value) {
         set(key.getBytes(StandardCharsets.UTF_8), value);
     }
 
+    /**
+     * Set the provided key and value pair into the connected ledger.
+     */
     public void set(byte[] key, byte[] value) {
         ImmudbProto.KeyValue kv = ImmudbProto.KeyValue
                 .newBuilder()
@@ -202,31 +228,9 @@ public class LedgerComplianceClient {
             throw new RuntimeException(e.getMessage());
         }
         if (txMd.getNentries() != 2) {
-            // System.out.println(">>> set > Got back txMd Nentries=" + txMd.getNentries());
             throw new RuntimeException(CORRUPTED_DATA);
         }
     }
-
-//    Commented out for now, since it's not yet implemented on CNLC server side.
-//    Server response: "method /lc.schema.LcService/Set support only 1 key value for transaction at the moment"
-//
-//    public void setAll(KVList kvList) {
-//
-//        ImmudbProto.SetRequest.Builder reqBuilder = ImmudbProto.SetRequest.newBuilder();
-//        for (KV kv : kvList.entries()) {
-//            ImmudbProto.KeyValue schemaKV = ImmudbProto.KeyValue
-//                    .newBuilder()
-//                    .setKey(ByteString.copyFrom(kv.getKey()))
-//                    .setValue(ByteString.copyFrom(kv.getValue()))
-//                    .build();
-//            reqBuilder.addKVs(schemaKV);
-//        }
-//        ImmudbProto.TxMetadata txMd = stub.set(reqBuilder.build());
-//        System.out.println(">>> setAll > txMd nEntries=" + txMd.getNentries());
-//        if (txMd.getNentries() != kvList.entries().size() + 1) {
-//            throw new RuntimeException(CORRUPTED_DATA);
-//        }
-//    }
 
     /**
      * @deprecated This method is deprecated and it will be removed in the next release. Please use verifiedSet instead.
@@ -242,11 +246,19 @@ public class LedgerComplianceClient {
         verifiedSet(key, value);
     }
 
-    public void verifiedSet(String key, byte[] value) throws VerificationException {
-        verifiedSet(key.getBytes(StandardCharsets.UTF_8), value);
+    /**
+     * Set the provided key and value pair into the connected ledger in a "safe"
+     * (verified, tamper-proof detectable) manner.
+     */
+    public TxMetadata verifiedSet(String key, byte[] value) throws VerificationException {
+        return verifiedSet(key.getBytes(StandardCharsets.UTF_8), value);
     }
 
-    public void verifiedSet(byte[] key, byte[] value) throws VerificationException {
+    /**
+     * Set the provided key and value pair into the connected ledger in a "safe"
+     * (verified, tamper-proof detectable) manner.
+     */
+    public TxMetadata verifiedSet(byte[] key, byte[] value) throws VerificationException {
 
         ImmuState state = state();
         ImmudbProto.KeyValue kv = ImmudbProto.KeyValue.newBuilder()
@@ -299,7 +311,9 @@ public class LedgerComplianceClient {
 
         ImmuState newState = new ImmuState(apiKey, targetId, targetAlh, vtx.getSignature().getSignature().toByteArray());
 
-        stateHolder.setState(newState);
+        stateHolder.setState(serverId, newState);
+
+        return tx.metadata();
     }
 
 
@@ -308,10 +322,16 @@ public class LedgerComplianceClient {
     //
 
 
+    /**
+     * Get the value of the provided key.
+     */
     public byte[] get(String key) {
         return get(key.getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * Get the value of the provided key.
+     */
     public byte[] get(byte[] key) {
         ImmudbProto.KeyRequest req = ImmudbProto.KeyRequest.newBuilder().setKey(ByteString.copyFrom(key)).build();
         ImmudbProto.Entry entry;
@@ -337,15 +357,71 @@ public class LedgerComplianceClient {
         return verifiedGet(key);
     }
 
+    /**
+     * Get the value of the provided key in a "safe" manner
+     * (verified that no data tampering happened on the server).
+     */
     public byte[] verifiedGet(String key) throws VerificationException {
         return verifiedGet(key.getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * Get the value of the provided key in a "safe" manner
+     * (verified that no data tampering happened on the server).
+     */
     public byte[] verifiedGet(byte[] key) throws VerificationException {
 
         ImmuState state = state();
         ImmudbProto.KeyRequest keyReq = ImmudbProto.KeyRequest.newBuilder()
                 .setKey(ByteString.copyFrom(key))
+                .build();
+        return verifiedGet(keyReq, state).kv.getValue();
+    }
+
+    /**
+     * Get the value of the provided key in a "safe" manner
+     * (verified that no data tampering happened on the server).
+     * This retrieval is considering a specific transaction id within which the KV pair has been previously set.
+     */
+    public byte[] verifiedGetAt(String key, long atTxId) throws VerificationException {
+        return verifiedGetAt(key.getBytes(StandardCharsets.UTF_8), atTxId);
+    }
+
+    /**
+     * Get the value of the provided key in a "safe" manner
+     * (verified that no data tampering happened on the server).
+     * This retrieval is considering a specific transaction id within which the KV pair has been previously set.
+     */
+    public byte[] verifiedGetAt(byte[] key, long atTxId) throws VerificationException {
+
+        ImmuState state = state();
+        ImmudbProto.KeyRequest keyReq = ImmudbProto.KeyRequest.newBuilder()
+                .setKey(ByteString.copyFrom(key))
+                .setAtTx(atTxId)
+                .build();
+        return verifiedGet(keyReq, state).kv.getValue();
+    }
+
+    /**
+     * Get the value of the provided key in a "safe" manner
+     * (verified that no data tampering happened on the server).
+     * This retrieval is considering a specific transaction id since such a KV has been set.
+     */
+    public byte[] verifiedGetSince(String key, long txId) throws VerificationException {
+        return verifiedGetSince(key.getBytes(StandardCharsets.UTF_8), txId);
+    }
+
+    /**
+     * Get the value of the provided key in a "safe" manner
+     * (verified that no data tampering happened on the server).
+     * This retrieval is considering a specific transaction id since such a KV has been set.
+     */
+    public byte[] verifiedGetSince(byte[] key, long txId) throws VerificationException {
+
+        ImmuState state = state();
+        ImmudbProto.KeyRequest keyReq = ImmudbProto.KeyRequest.newBuilder()
+                .setKey(ByteString.copyFrom(key))
+                .setSinceTx(txId)
                 .build();
         return verifiedGet(keyReq, state).kv.getValue();
     }
@@ -421,11 +497,14 @@ public class LedgerComplianceClient {
                 targetAlh,
                 vEntry.getVerifiableTx().getSignature().toByteArray());
 
-        stateHolder.setState(newState);
+        stateHolder.setState(serverId, newState);
 
         return Entry.valueOf(vEntry.getEntry());
     }
 
+    /**
+     * Get multiple key-value pairs.
+     */
     public List<KV> getAll(List<String> keys) {
         List<ByteString> keysBS = new ArrayList<>(keys.size());
         for (String key : keys) {
@@ -446,15 +525,39 @@ public class LedgerComplianceClient {
 
 
     //
+    // ========== HEALTH ==========
+    //
+
+
+    /**
+     * Get the heath state of the server.
+     *
+     * @return true, if all good;<br/>
+     * false, otherwise.
+     */
+    public boolean health() {
+        Empty empty = com.google.protobuf.Empty.getDefaultInstance();
+        return stub.health(empty).getStatus();
+    }
+
+
+    //
     // ========== HISTORY ==========
     //
 
 
+    /**
+     * Get the history of a key: values that were been set over time.
+     */
     public List<KV> history(String key, int limit, long offset, boolean reverse) {
         return history(key.getBytes(StandardCharsets.UTF_8), limit, offset, reverse);
     }
 
+    /**
+     * Get the history of a key: values that were been set over time.
+     */
     public List<KV> history(byte[] key, int limit, long offset, boolean reverse) {
+
         ImmudbProto.Entries entries;
         try {
             entries = stub.history(ImmudbProto.HistoryRequest.newBuilder()
@@ -476,20 +579,36 @@ public class LedgerComplianceClient {
     //
 
 
+    /**
+     * Scan all entries (KVs) that exist for a key.
+     * The provided "key" can just be a prefix, not just the whole key name.
+     */
     public List<KV> scan(String key) {
         return scan(ByteString.copyFrom(key, StandardCharsets.UTF_8).toByteArray());
     }
 
+    /**
+     * Scan all entries (KVs) that exist for a key.
+     * The provided "key" can just be a prefix, not just the whole key name.
+     */
     public List<KV> scan(String key, long sinceTxId, long limit, boolean reverse) {
         return scan(ByteString.copyFrom(key, StandardCharsets.UTF_8).toByteArray(), sinceTxId, limit, reverse);
     }
 
+    /**
+     * Scan all entries (KVs) that exist for a key.
+     * The provided "key" can just be a prefix, not just the whole key name.
+     */
     public List<KV> scan(byte[] key) {
         ImmudbProto.ScanRequest req = ImmudbProto.ScanRequest.newBuilder().setPrefix(ByteString.copyFrom(key)).build();
         ImmudbProto.Entries entries = stub.scan(req);
         return buildList(entries);
     }
 
+    /**
+     * Scan all entries (KVs) that exist for a key.
+     * The provided "key" can just be a prefix, not just the whole key name.
+     */
     public List<KV> scan(byte[] key, long sinceTxId, long limit, boolean reverse) {
         ImmudbProto.ScanRequest req = ImmudbProto.ScanRequest.newBuilder()
                 .setPrefix(ByteString.copyFrom(key))
@@ -558,15 +677,15 @@ public class LedgerComplianceClient {
     //
 
     public void reportTamper(byte[] key, long index, ImmudbProto.Signature signature) {
+
         Lc.ReportOptions options = Lc.ReportOptions.newBuilder()
-                .setPayload(Lc.TamperReport.newBuilder()
-                                .setKey(ByteString.copyFrom(key))
-                                .setIndex(index)
-//                        .setRoot(ByteString.copyFrom(getRoot().getDigest()))
-                                .setRoot(ByteString.copyFrom(state().txHash))
-                                .build()
+                .withPayload(Lc.TamperReport.newBuilder()
+                        .withKey(ByteString.copyFrom(key))
+                        .withIndex(index)
+                        .withRoot(ByteString.copyFrom(state().txHash))
+                        .build()
                 )
-                .setSignature(signature)
+                .withSignature(signature)
                 .build();
         //noinspection ResultOfMethodCallIgnored
         stub.reportTamper(options);
