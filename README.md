@@ -17,7 +17,7 @@ Using Java 1.8 and newer.
     * [Creating a Client](#creating-a-client)
     * [Standard Read and Write](#standard-read-and-write)
     * [Verified or Safe read and write](#verified-or-safe-read-and-write)
-    * [Multi-key Read](#multi-key-read-and-write)
+    * [Multi-key Read](#multi-key-read)
     * [Closing the Client](#closing-the-client)
 - [Contributing](#contributing)
 
@@ -140,8 +140,8 @@ read or write operation:
 
 ```java
     try {
-        client.safeSet("k123", new byte[]{1, 2, 3});
-        byte[] v = client.safeGet("k123");
+        client.verifiedSet("k123", new byte[]{1, 2, 3});
+        byte[] v = client.verifiedGet("k123");
 
     } (catch VerificationException e) {
         // Data Tampering Detected! That's a call for action!
