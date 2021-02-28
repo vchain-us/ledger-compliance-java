@@ -41,11 +41,9 @@ public class App {
             client = LedgerComplianceClient.newBuilder()
                     .withStateHolder(stateHolder)
                     .withServerUrl("localhost")
-//                    .withServerPort(33080)
-                    .withServerPort(3324)
+                    .withServerPort(33080)
                     .withTLS(false)
-//                    .withApiKey("APIKEYHERE")
-                    .withApiKey("udfyjxgdqtmiqdekaszhbqjpimolbmnhxlia")
+                    .withApiKey("APIKEYHERE")
                     .build();
 
             client.set("hello", "immutable world!".getBytes());
