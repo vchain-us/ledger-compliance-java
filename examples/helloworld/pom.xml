@@ -1,11 +1,14 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.codenotary.ledgercompliance</groupId>
-    <artifactId>java-sample-app</artifactId>
+    <artifactId>cnlc-java-helloworld</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+    <name>CNLC Java HelloWorld</name>
+    <description>A simple hello world style of interacting with CodeNotary Ledger Compliance using Java SDK.</description>
 
 
     <build>
+
         <sourceDirectory>src</sourceDirectory>
         <plugins>
             <plugin>
@@ -17,20 +20,22 @@
                 </configuration>
             </plugin>
         </plugins>
+
     </build>
 
-
     <dependencies>
+
         <dependency>
             <groupId>io.codenotary</groupId>
             <artifactId>ledger-compliance-java</artifactId>
-            <version>0.3.1</version>
+            <version>2.1.5.0</version>
         </dependency>
         <dependency>
             <groupId>io.codenotary</groupId>
             <artifactId>immudb4j</artifactId>
-            <version>0.3.0</version>
+            <version>0.9.0.4</version>
         </dependency>
+
     </dependencies>
 
 </project>
