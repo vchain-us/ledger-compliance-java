@@ -69,7 +69,7 @@ objects:
 
 Both, `ledger-compliance-java` and `immudb4j` are currently being hosted on [Maven Central] and [Github Packages].
 
-[Github Packages]: https://docs.github.com/en/packages
+[Github Packages]: https://docs.github.com/en/packages/guides/configuring-apache-maven-for-use-with-github-packages
 [Maven Central]: https://search.maven.org/artifact/io.codenotary/ledger-compliance-java
 
 ### Using Github Packages
