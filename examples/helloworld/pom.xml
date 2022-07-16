@@ -33,7 +33,7 @@
         <dependency>
             <groupId>io.codenotary</groupId>
             <artifactId>immudb4j</artifactId>
-            <version>0.9.0.4</version>
+            <version>0.9.10.2</version>
         </dependency>
 
     </dependencies>
